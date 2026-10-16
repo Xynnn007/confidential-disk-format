@@ -29,6 +29,7 @@ S2  mapped (/dev/mapper/…); teardown commands printed; disk unchanged
 
 - Linux, **root** (`losetup`, `cryptsetup`, `veritysetup`, device-mapper)
 - `sgdisk`, `cryptsetup`, `veritysetup`, `losetup`, `blockdev`, `dd`
+- `cryptsetup` **2.5.0 or newer** for both `create` and `open` with `crypt+integrity`.
 - Rust (`cargo`)
 
 ```bash
@@ -37,7 +38,9 @@ cargo build --release
 sudo ./target/release/cdf-gpt --help
 ```
 
-
+If `cryptsetup` fails without diagnostics, set `CDF_CRYPTSETUP_DEBUG=1`
+when running `cdf-gpt`. This passes `--debug` to the subprocess and includes
+its log in the reported error.
 
 ## Disk argument
 

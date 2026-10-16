@@ -10,6 +10,14 @@ use uuid::Uuid;
 use crate::format::Profile;
 use crate::keys::LuksKey;
 
+fn cryptsetup_command() -> Command {
+    let mut cmd = Command::new("cryptsetup");
+    if std::env::var("CDF_CRYPTSETUP_DEBUG").as_deref() == Ok("1") {
+        cmd.arg("--debug");
+    }
+    cmd
+}
+
 fn cryptsetup_with_key(mut cmd: Command, key: &[u8]) -> Result<()> {
     let prog = format!("{cmd:?}");
     cmd.stdin(Stdio::piped())
@@ -25,8 +33,10 @@ fn cryptsetup_with_key(mut cmd: Command, key: &[u8]) -> Result<()> {
         .with_context(|| format!("wait {prog}"))?;
     if !out.status.success() {
         bail!(
-            "command failed: {prog}\n{}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            "command failed ({status}): {prog}\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&out.stdout).trim(),
+            String::from_utf8_lossy(&out.stderr).trim(),
+            status = out.status,
         );
     }
     Ok(())
@@ -47,7 +57,7 @@ pub fn format_detached(
         f.set_len(4 * 1024 * 1024)?;
     }
 
-    let mut cmd = Command::new("cryptsetup");
+    let mut cmd = cryptsetup_command();
     cmd.args([
         "luksFormat",
         "--type",
@@ -91,7 +101,7 @@ pub fn open_detached(data_dev: &Path, header: &[u8], k_luks: &LuksKey, mapper: &
     hdr.write_all(header)?;
     hdr.flush()?;
 
-    let mut cmd = Command::new("cryptsetup");
+    let mut cmd = cryptsetup_command();
     cmd.args(["open", "--type", "luks2", "--header"])
         .arg(hdr.path())
         .args(["--key-file", "-"])
